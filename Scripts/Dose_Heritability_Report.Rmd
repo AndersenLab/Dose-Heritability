@@ -22,7 +22,7 @@ paste(experimentName)
  
 ## Raw Activity ##
 
-```{r, warning = FALSE, echo = FALSE}
+```{r, warning = FALSE, echo = FALSE, cache = TRUE, autodep = TRUE, cache.path = paste("Scripts/", processedDataPath, "/cache/", sep = "")}
 
 ## Pull in all the file associated with the current experiment ##
 ## and create a data frame containing the raw data.            ##
@@ -51,7 +51,7 @@ save(ordered.df, file = paste(processedDataPath, "/", experimentName, "_Processe
 
 ```
 
-```{r Raw, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste("Scripts/", processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
+```{r Raw, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste("Scripts/", processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12, cache = TRUE, autodep = TRUE, cache.path = paste("Scripts/", processedDataPath, "/cache/", sep = "")}
 
 ggplot(ordered.df) + aes(x = time, y = activity) + geom_line() + facet_grid(row ~ strain) +
   labs(x = "Time (minutes)", y = "Raw Activity")
@@ -60,7 +60,7 @@ ggplot(ordered.df) + aes(x = time, y = activity) + geom_line() + facet_grid(row 
 
 ## Cleaned Data ##
 
-```{r, warning = FALSE, message = FALSE, echo = FALSE}
+```{r, warning = FALSE, message = FALSE, echo = FALSE, cache = TRUE, autodep = TRUE, cache.path = paste("Scripts/", processedDataPath, "/cache/", sep = "")}
 
 ## Remove both columns and individual wells that were contaminated. ##
 
@@ -75,7 +75,7 @@ save(cleaned.df, file = paste(processedDataPath, "/", experimentName, "_Cleaned2
 
 ```
 
-```{r Cleaned, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste("Scripts/", processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
+```{r Cleaned, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste("Scripts/", processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12, cache = TRUE, autodep = TRUE, cache.path = paste("Scripts/", processedDataPath, "/cache/", sep = "")}
 
 ggplot(cleaned.df) + aes(x = time, y = activity) + geom_line() + facet_grid(row ~ strain) +
   labs(x= "Time (minutes)", y = "Raw Activity")
@@ -84,7 +84,7 @@ ggplot(cleaned.df) + aes(x = time, y = activity) + geom_line() + facet_grid(row 
 
 ## Well Normalized Data ##
 
-```{r, warning = FALSE, message = FALSE, echo = FALSE}
+```{r, warning = FALSE, message = FALSE, echo = FALSE, cache = TRUE, autodep = TRUE, cache.path = paste("Scripts/", processedDataPath, "/cache/", sep = "")}
 
 ## Normalize activity data by the maximum activity of each well. ##
 ## NEED TO ADD NORMALIZING BY THE NUMBER OF WORMS SORTED.        ##
@@ -99,7 +99,7 @@ save(well.df, file = paste(processedDataPath, "/", experimentName, "_Normalized.
 
 ```
 
-```{r Normalized, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste("Scripts/", processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
+```{r Normalized, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste("Scripts/", processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12, cache = TRUE, autodep = TRUE, cache.path = paste("Scripts/", processedDataPath, "/cache/", sep = "")}
 
 ggplot(well.df) + aes(x = time, y = norm.act) + ylim(0, 100) + geom_line() + facet_grid(row ~ strain) +
   labs(x = "Time (minutes)", y = "Normalized Activity")
@@ -108,7 +108,7 @@ ggplot(well.df) + aes(x = time, y = norm.act) + ylim(0, 100) + geom_line() + fac
 
 ## Setting Top of Curve by Well ##
 
-```{r, warning = FALSE, message = FALSE, echo = FALSE}
+```{r, warning = FALSE, message = FALSE, echo = FALSE, cache = TRUE, autodep = TRUE, cache.path = paste("Scripts/", processedDataPath, "/cache/", sep = "")}
 
 # THIS IS NOT WORKING #
 
@@ -121,7 +121,7 @@ well.df <- ungroup(well.df)
   
 ```
 
-```{r Adjusted, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste("Scripts/", processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
+```{r Adjusted, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste("Scripts/", processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12, cache = TRUE, autodep = TRUE, cache.path = paste("Scripts/", processedDataPath, "/cache/", sep = "")}
 
 ggplot(well.df) + aes(x = time, y = adjusted.activity) + geom_line() + facet_grid(row ~ strain) +
   labs(x = "Time (minutes)", y = "Adjusted Activity")
@@ -130,7 +130,7 @@ ggplot(well.df) + aes(x = time, y = adjusted.activity) + geom_line() + facet_gri
 
 ## Well Curve Fitting ##
 
-```{r, warning = FALSE, message = FALSE, echo = FALSE}
+```{r, warning = FALSE, message = FALSE, echo = FALSE, results = "asis", cache = TRUE, autodep = TRUE, cache.path = paste("Scripts/", processedDataPath, "/cache/", sep = "")}
 
 well_params.df <- data.frame(strain = rep(strains, each = replicates), row = rep(levels(well.df$row), nStrains), bparam = rep(0, nStrains * replicates), cparam = rep(0, nStrains * replicates))
 
@@ -149,13 +149,13 @@ for (x in levels(well.df$strain)) {
 
 save(well_params.df, file = paste(processedDataPath, "/", experimentName, "_Well_Params.Rda", sep = ""), ascii = TRUE)
 
-print(well_params.df)
+kable(well_params.df)
 
 ```
 
 ## 2 Parameter Logistic Function Fits by Well ##
 
-```{r, warning = FALSE, message = FALSE, echo = FALSE}
+```{r, warning = FALSE, message = FALSE, echo = FALSE, cache = TRUE, autodep = TRUE, cache.path = paste("Scripts/", processedDataPath, "/cache/", sep = "")}
 
 draw_twoplog <- function(bparam, cparam) {
   return((100 / (1 + ((times / cparam) ^ bparam))))
@@ -183,7 +183,7 @@ for (i in 1:length(well.df$yvalue)) {
 
 ```
 
-```{r Well_Fits, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste("Scripts/", processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
+```{r Well_Fits, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste("Scripts/", processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12, cache = TRUE, autodep = TRUE, cache.path = paste("Scripts/", processedDataPath, "/cache/", sep = "")}
 
 ggplot(well.df) + geom_line(aes(x = time, y = norm.act)) + ylim(0, 100) + geom_line(aes(x = time, y = yvalue, color = "red")) + facet_grid(conc ~ strain)
 
@@ -191,7 +191,7 @@ ggplot(well.df) + geom_line(aes(x = time, y = norm.act)) + ylim(0, 100) + geom_l
 
 ## Strain Mean Data ##
 
-```{r, warning = FALSE, message = FALSE, echo = FALSE}
+```{r, warning = FALSE, message = FALSE, echo = FALSE, cache = TRUE, autodep = TRUE, cache.path = paste("Scripts/", processedDataPath, "/cache/", sep = "")}
 
 ## Let's look at the mean and standard deviation of the ##
 ## data per strain.                                     ##
@@ -219,7 +219,7 @@ for (i in 1:length(strain.df$total.activity)) {
 
 ```
 
-```{r Strain_Mean, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste("Scripts/", processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
+```{r Strain_Mean, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste("Scripts/", processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12, cache = TRUE, autodep = TRUE, cache.path = paste("Scripts/", processedDataPath, "/cache/", sep = "")}
 
 ggplot(strain.df) + geom_line(aes(x = time, y = mean.activity)) + 
   geom_errorbar(aes(x = time, ymin = mean.activity - sd.activity, ymax = mean.activity + sd.activity)) + 
@@ -229,7 +229,7 @@ ggplot(strain.df) + geom_line(aes(x = time, y = mean.activity)) +
 
 ## Strain Median Data ##
 
-```{r Strain_Median, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste("Scripts/", processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
+```{r Strain_Median, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste("Scripts/", processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12, cache = TRUE, autodep = TRUE, cache.path = paste("Scripts/", processedDataPath, "/cache/", sep = "")}
 
 ggplot(strain.df) + aes(x = time, y = median.activity) + geom_line() + facet_wrap( ~ strain) +
   labs(x = "Time (minutes)", y = "Median Activity")
@@ -238,7 +238,7 @@ ggplot(strain.df) + aes(x = time, y = median.activity) + geom_line() + facet_wra
 
 ## Strain Total Data ##
 
-```{r Strain_Total, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste("Scripts/", processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
+```{r Strain_Total, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste("Scripts/", processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12, cache = TRUE, autodep = TRUE, cache.path = paste("Scripts/", processedDataPath, "/cache/", sep = "")}
 
 ggplot(strain.df) + aes(x = time, y = total.activity) + geom_line() + facet_wrap( ~ strain) +
   labs(x = "Time (minutes)", y = "Activity")
@@ -247,7 +247,7 @@ ggplot(strain.df) + aes(x = time, y = total.activity) + geom_line() + facet_wrap
 
 ## Strain Normalized Data ##
 
-```{r, warning = FALSE, message = FALSE, echo = FALSE}
+```{r, warning = FALSE, message = FALSE, echo = FALSE, cache = TRUE, autodep = TRUE, cache.path = paste("Scripts/", processedDataPath, "/cache/", sep = "")}
 
 strain.df <- strain.df %>%
   group_by(strain) %>%
@@ -257,7 +257,7 @@ strain.df <- ungroup(strain.df)
 
 ```
 
-```{r Strain_Normalized, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste("Scripts/", processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
+```{r Strain_Normalized, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste("Scripts/", processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12, cache = TRUE, autodep = TRUE, cache.path = paste("Scripts/", processedDataPath, "/cache/", sep = "")}
 
 ggplot(strain.df) + aes(x = time, y = norm.act) + ylim(0, 100) + geom_line() + facet_wrap( ~ strain) + 
   labs(x = "Time (minutes)", y = "Normalized Activity")
@@ -266,7 +266,7 @@ ggplot(strain.df) + aes(x = time, y = norm.act) + ylim(0, 100) + geom_line() + f
 
 ## Setting Top of Curve by Strain ##
 
-```{r, warning = FALSE, message = FALSE, echo = FALSE}
+```{r, warning = FALSE, message = FALSE, echo = FALSE, cache = TRUE, autodep = TRUE, cache.path = paste("Scripts/", processedDataPath, "/cache/", sep = "")}
 
 strain.df <- strain.df %>%
   group_by(strain) %>%
@@ -282,7 +282,7 @@ for (i in 1:length(strain.df$strain)) {
 
 ```
 
-```{r Strain_Adjusted, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste("Scripts/", processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
+```{r Strain_Adjusted, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste("Scripts/", processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12, cache = TRUE, autodep = TRUE, cache.path = paste("Scripts/", processedDataPath, "/cache/", sep = "")}
 
 #ggplot(strain.df) + aes(x = time, y = adjusted.activity) + geom_line() + facet_grid(row ~ strain) +
 #  labs(x = "Time (minutes)", y = "Adjusted Activity")
@@ -291,7 +291,7 @@ for (i in 1:length(strain.df$strain)) {
 
 ## Strain Curve Fitting ##
 
-```{r, warning = FALSE, message = FALSE, echo = FALSE}
+```{r, warning = FALSE, message = FALSE, echo = FALSE, results = "asis", cache = TRUE, autodep = TRUE, cache.path = paste("Scripts/", processedDataPath, "/cache/", sep = "")}
 
 strain_params.df <- data.frame(strain = strains, bparam = rep(0, nStrains), cparam = rep(0, nStrains))
 
@@ -308,13 +308,13 @@ for (x in strains) {
 
 save(strain_params.df, file = paste(processedDataPath, "/", experimentName, "_Strain_Params.Rda", sep = ""), ascii = TRUE)
 
-print(strain_params.df)
+kable(strain_params.df)
 
 ```
 
 ## 2 Parameter Logistic Function Fits by Strain ##
 
-```{r, warning = FALSE, message = FALSE, echo = FALSE}
+```{r, warning = FALSE, message = FALSE, echo = FALSE, cache = TRUE, autodep = TRUE, cache.path = paste("Scripts/", processedDataPath, "/cache/", sep = "")}
 
 strain_survivals.df <- data.frame(time = times)
 
@@ -341,7 +341,7 @@ for (i in 1:length(strain.df$yvalue)) {
 
 ```
 
-```{r Strain_Fits, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste("Scripts/", processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
+```{r Strain_Fits, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste("Scripts/", processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12, cache = TRUE, autodep = TRUE, cache.path = paste("Scripts/", processedDataPath, "/cache/", sep = "")}
 
 ggplot(strain.df) + geom_line(aes(x = time, y = norm.act)) + ylim(0, 100) + geom_line(aes(x = time, y = yvalue, color = "red")) + facet_wrap( ~ strain)
 
