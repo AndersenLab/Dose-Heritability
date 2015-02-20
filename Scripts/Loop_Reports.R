@@ -1,4 +1,10 @@
-## Alternate Loop Reports ##
+## Alternate Loop Reports ########################################################################
+## NOTICE: This script assumes that your project folders are laid out and named in a certain    ##
+## way. All wMicrotracker output should be in an experiment folder in ./Data/Raw/ named         ##
+## p0#_experimentName and that there is a corresponding R script in the ./Scripts/ folder       ##
+## titled p0#_experimentName.R A report HTML file will be generated in /Results/ and data       ##
+## associated with that will be stored in /Data/Processed/.                                     ##
+##################################################################################################
 
 library("knitr")
 library("stringr")
@@ -7,18 +13,22 @@ library("dplyr")
 library("ggplot2")
 library("tidyr")
 
-experiments.file <- dir(path = "./Scripts", "p0", full.names = TRUE)
+experiments.file <- dir(path = "./Scripts", "mgmL", full.names = TRUE)
+opts_knit$set(root.dir = getwd())
 
 for (i in 1:length(experiments.file)) {
   experimentName <- str_split(str_split(experiments.file[i], "Scripts/")[[1]][2], ".R")[[1]][1]
-  knit2html("./Scripts/Dose_Heritability_Report.Rmd", 
+  opts_knit$set(cache.path = paste("./Data/Processed/", experimentName, "/cache/", sep = ""))
+  knit2html("./Scripts/Longevity_Report.Rmd", 
             output = paste("./Results/", experimentName, "_Report.html", sep = ""),
             stylesheet = "./Scripts/foghorn_edited.css")
 }
 
-# For testing ==============================
-experiments.file <- dir(path = "./Scripts", "p0", full.names = TRUE)
-experimentName <- str_split(str_split(experiments.file[1], "Scripts/")[[1]][2], ".R")[[1]][1]
-knit2html("./Scripts/Dose_Heritability_Report.Rmd", 
+## For testing one experiment ####################################################################
+
+experiments.file <- dir(path = "./Scripts", "mgmL", full.names = TRUE)
+experimentName <- str_split(str_split(experiments.file[9], "Scripts/")[[1]][2], ".R")[[1]][1]
+opts_knit$set(cache.path = paste("./Data/Processed/", experimentName, "/cache/", sep = ""))
+knit2html("./Scripts/Longevity_Report.Rmd", 
           output = paste("./Results/", experimentName, "_Report.html", sep = ""),
           stylesheet = "./Scripts/foghorn_edited.css")
