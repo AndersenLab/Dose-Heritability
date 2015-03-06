@@ -1,5 +1,5 @@
 ---
-title: "Analysis of Longevity"
+title: "Dose Heritability"
 author: "Ryan Abdella"
 date: "January 15, 2015"
 output:
@@ -56,7 +56,6 @@ save(raw.df, file = paste(processedDataPath, "/", experimentName, "_Raw.Rda", se
 
 ordered.df <- raw.df[order(raw.df$col, raw.df$row, raw.df$time), ]
 ordered.df$strain <- rep(strains, each = numBins * length(conc))
-ordered.df$conc <- rep(rep(conc, each = numBins), 12)
 ordered.df$num <- rep(nums, each = numBins)
 
 save(ordered.df, file = paste(processedDataPath, "/", experimentName, "_Processed.Rda", sep = ""), ascii = TRUE)
@@ -92,12 +91,11 @@ save(cleaned.df, file = paste(processedDataPath, "/", experimentName, "_Cleaned.
 
 ```{r, warning = FALSE, message = FALSE, echo = FALSE}
 
-## Normalize total activity data by the maximum activity of each well. ##
-## NEED TO ADD NORMALIZING BY THE NUMBER OF WORMS SORTED. This is also ##
-## the same as normalizing the mean values.                            ##
+## Normalize total activity data by the number of worms in each well. ##
+## This is also the same as normalizing the mean values.              ##
 
 well.df <- cleaned.df %>%
-  group_by(col) %>%
+  group_by(col, row) %>%
   mutate(norm.act = activity / num)
 
 well.df <- ungroup(well.df)
@@ -113,11 +111,15 @@ save(well.df, file = paste(processedDataPath, "/", experimentName, "_Well.Rda", 
 
 if (length(strains) != length(unique(strains))) {
   strain.df <- well.df %>%
-    group_by(strain, conc, time) %>%
+    group_by(strain, time) %>%
     summarise(mean.norm.act = mean(norm.act, na.rm = TRUE), 
               sd.norm.act = sd(norm.act, na.rm = TRUE), 
               median.norm.act = median(norm.act, na.rm = TRUE), 
-              total.norm.act = sum(norm.act, na.rm = TRUE))
+              total.norm.act = sum(norm.act, na.rm = TRUE),
+              mean.act = mean(activity, na.rm = TRUE),
+              sd.act = sd(activity, na.rm = TRUE),
+              median.act = median(activity, na.rm = TRUE),
+              total.act = sum(activity, na.rm = TRUE))
 
   strain.df <- ungroup(strain.df)
 
@@ -132,28 +134,25 @@ if (length(strains) != length(unique(strains))) {
 
 ## Strain Mean and Median Data ##
 
-```{r Strain_Mean_Median, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste(processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
+```{r, Strain_Mean_Median, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste(processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
 
-ggplot(strain.df) + geom_line(aes(x = time, y = mean.norm.act)) + geom_errorbar(aes(x = time, ymin = mean.norm.act - sd.norm.act, ymax = mean.norm.act + sd.norm.act)) + geom_line(aes(x = time, y = median.norm.act, color = "red")) + facet_grid(conc ~ strain) + labs(x = "Time (minutes)", y = "Normalized Activity") + ylim(0, NA) + presentation
+ggplot(strain.df) + geom_line(aes(x = time, y = mean.act)) + geom_errorbar(aes(x = time, ymin = mean.act - sd.act, ymax = mean.act + sd.act)) + geom_line(aes(x = time, y = median.act, color = "red")) + facet_wrap( ~ strain) + labs(x = "Time (minutes)", y = "Activity") + ylim(0, NA) + presentation
 
 ```
 
-## Strain Variation in Drug Concentration ##
+## Strain Normalized Mean and Median Data ##
 
-```{r Strain_Dose_Response, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste(processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
+```{r Strain_Norm_Mean_Median, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste(processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
 
-if (length(strains) != length(unique(strains))) {
-  ggplot(strain.df) + aes(x = time, y = mean.norm.act, color = strain) + geom_line() + facet_wrap( ~ conc) + 
-    labs(x = "Time (mins)", y = "Mean Activity") + ylim(0, NA) + presentation
-}
+ggplot(strain.df) + geom_line(aes(x = time, y = mean.norm.act)) + geom_errorbar(aes(x = time, ymin = mean.norm.act - sd.norm.act, ymax = mean.norm.act + sd.norm.act)) + geom_line(aes(x = time, y = median.norm.act, color = "red")) + facet_wrap( ~ strain) + labs(x = "Time (minutes)", y = "Normalized Activity") + ylim(0, NA) + presentation
 
 ```
 
 ```{r Strain_Variability, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste(processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
 
-well_time.df <- well.df %>% filter(time == 44)
+well_time.df <- well.df %>% filter(time == 10)
 
-ggplot(well_time.df) + aes(x = strain, y = norm.act) + geom_boxplot() + facet_wrap( ~ conc) + 
+ggplot(well_time.df) + aes(x = strain, y = norm.act) + geom_boxplot() + geom_jitter() + 
     labs(x = "Strain", y = "Normalized Activity") + ylim(0, NA) + presentation
 
 ```

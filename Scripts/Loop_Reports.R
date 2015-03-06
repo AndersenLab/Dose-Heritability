@@ -13,7 +13,7 @@ library("dplyr")
 library("ggplot2")
 library("tidyr")
 
-experiments.file <- dir(path = "./Scripts", "p0", full.names = TRUE)
+experiments.file <- dir(path = "./Scripts", "p02", full.names = TRUE)
 opts_knit$set(root.dir = getwd())
 
 for (i in 1:length(experiments.file)) {
@@ -25,8 +25,8 @@ for (i in 1:length(experiments.file)) {
 
 ## For testing one experiment ####################################################################
 
-experiments.file <- dir(path = "./Scripts", "p0", full.names = TRUE)
-experimentName <- str_split(str_split(experiments.file[1], "Scripts/")[[1]][2], ".R")[[1]][1]
+experiments.file <- dir(path = "./Scripts", "p02", full.names = TRUE)
+experimentName <- str_split(str_split(experiments.file[4], "Scripts/")[[1]][2], ".R")[[1]][1]
 knit2html("./Scripts/Dose_Heritability_Report.Rmd", 
           output = paste("./Results/", experimentName, "_Report.html", sep = ""),
           stylesheet = "./Scripts/foghorn_edited.css")

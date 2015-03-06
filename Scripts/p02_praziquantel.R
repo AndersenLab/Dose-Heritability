@@ -7,6 +7,4 @@ rowRemove <- c()
 wellRemove <- data.frame(col = c(), row = c())
 rows <- c("A", "B", "C", "D", "E", "F", "G", "H")
 
-conc <- c(0, 15.625, 31.25, 62.5, 125, 250, 500, 1000) # µM
-
 nums <- scan("./Scripts/praziquantel_count.txt", sep = " ")

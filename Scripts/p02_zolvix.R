@@ -7,6 +7,4 @@ rowRemove <- c()
 wellRemove <- data.frame(col = c(), row = c())
 rows <- c("A", "B", "C", "D", "E", "F", "G", "H")
 
-conc <- c(0, 0.15, 0.29, 0.59, 1.19, 2.38, 4.76, 9.53) # µM
-
 nums <- scan("./Scripts/zolvix_count.txt", sep = " ")
