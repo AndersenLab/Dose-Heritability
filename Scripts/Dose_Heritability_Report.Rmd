@@ -1,7 +1,7 @@
 ---
-title: "Analysis of Drug Heritability"
+title: "Analysis of Longevity"
 author: "Ryan Abdella"
-date: "February 27, 2015"
+date: "January 15, 2015"
 output:
   html_document:
     css: ~/Github/Food-Optimization/Scripts/foghorn_edited.css
@@ -55,7 +55,9 @@ save(raw.df, file = paste(processedDataPath, "/", experimentName, "_Raw.Rda", se
 ## experiment configuration file.                                           ##
 
 ordered.df <- raw.df[order(raw.df$col, raw.df$row, raw.df$time), ]
-ordered.df$strain <- rep(strains, each = numBins * replicates)
+ordered.df$strain <- rep(strains, each = numBins * length(conc))
+ordered.df$conc <- rep(rep(conc, each = numBins), 12)
+ordered.df$num <- rep(nums, each = numBins)
 
 save(ordered.df, file = paste(processedDataPath, "/", experimentName, "_Processed.Rda", sep = ""), ascii = TRUE)
 
@@ -65,20 +67,10 @@ save(ordered.df, file = paste(processedDataPath, "/", experimentName, "_Processe
 
 ```{r Raw, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste(processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
 
-label_strains <- function(variable, value) {
-  if (variable == "col") {
-    return(strains[value])
-  } else {
-    return(value)
-  }
-}
-
-ggplot(ordered.df) + aes(x = time, y = activity) + geom_point() + facet_grid(row ~ col, labeller = label_strains) +
-  labs(x = "Time (minutes)", y = "Raw Activity") + presentation
+ggplot(ordered.df) + aes(x = time, y = activity) + geom_point() + facet_grid(row ~ col) +
+  labs(x = "Time (minutes)", y = "Raw Activity") + ylim(0, NA) + presentation
 
 ```
-
-## Cleaned Data ##
 
 ```{r, warning = FALSE, message = FALSE, echo = FALSE}
 
@@ -98,15 +90,6 @@ save(cleaned.df, file = paste(processedDataPath, "/", experimentName, "_Cleaned.
 
 ```
 
-```{r Cleaned, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste(processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
-
-ggplot(cleaned.df) + aes(x = time, y = activity) + geom_line() + facet_grid(row ~ col, labeller = label_strains) +
-  labs(x= "Time (minutes)", y = "Raw Activity") + presentation
-
-```
-
-## Well Normalized Data ##
-
 ```{r, warning = FALSE, message = FALSE, echo = FALSE}
 
 ## Normalize total activity data by the maximum activity of each well. ##
@@ -114,8 +97,8 @@ ggplot(cleaned.df) + aes(x = time, y = activity) + geom_line() + facet_grid(row 
 ## the same as normalizing the mean values.                            ##
 
 well.df <- cleaned.df %>%
-  #group_by(col) %>%
-  mutate(norm.act = 100 * activity / max(activity, na.rm = TRUE))
+  group_by(col) %>%
+  mutate(norm.act = activity / num)
 
 well.df <- ungroup(well.df)
 
@@ -123,89 +106,55 @@ save(well.df, file = paste(processedDataPath, "/", experimentName, "_Well.Rda", 
 
 ```
 
-```{r Well_Normalized, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste(processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
-
-ggplot(well.df) + aes(x = time, y = norm.act) + ylim(0, 100) + geom_line() + facet_grid(row ~ col, labeller = label_strains) +
-  labs(x = "Time (minutes)", y = "Normalized Activity") + presentation
-
-```
-
 ```{r, warning = FALSE, message = FALSE, echo = FALSE}
 
 ## Let's look at the mean and standard deviation of the ##
 ## data per strain.                                     ##
+
 if (length(strains) != length(unique(strains))) {
   strain.df <- well.df %>%
-    group_by(strain, time) %>%
-    summarise(mean.activity = mean(activity, na.rm = TRUE), 
-              sd.activity = sd(activity, na.rm = TRUE), 
-              median.activity = median(activity, na.rm = TRUE), 
-              total.activity = sum(activity, na.rm = TRUE))
+    group_by(strain, conc, time) %>%
+    summarise(mean.norm.act = mean(norm.act, na.rm = TRUE), 
+              sd.norm.act = sd(norm.act, na.rm = TRUE), 
+              median.norm.act = median(norm.act, na.rm = TRUE), 
+              total.norm.act = sum(norm.act, na.rm = TRUE))
 
   strain.df <- ungroup(strain.df)
 
   for (i in 1:nrow(strain.df)) {
-    if (strain.df$total.activity[i] == 0) strain.df$total.activity[i] <- NA
-    if (!is.finite(strain.df$mean.activity[i])) strain.df$mean.activity[i] <- NA
-    if (!is.finite(strain.df$sd.activity[i])) strain.df$sd.activity[i] <- NA
+    if (strain.df$total.norm.act[i] == 0) strain.df$total.norm.act[i] <- NA
+    if (!is.finite(strain.df$mean.norm.act[i])) strain.df$mean.norm.act[i] <- NA
+    if (!is.finite(strain.df$sd.norm.act[i])) strain.df$sd.norm.act[i] <- NA
   }
 } else print("No strain replicates to display.")
 
 ```
 
-## Strain Mean Data ##
+## Strain Mean and Median Data ##
 
-```{r Strain_Mean, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste(processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
+```{r Strain_Mean_Median, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste(processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
+
+ggplot(strain.df) + geom_line(aes(x = time, y = mean.norm.act)) + geom_errorbar(aes(x = time, ymin = mean.norm.act - sd.norm.act, ymax = mean.norm.act + sd.norm.act)) + geom_line(aes(x = time, y = median.norm.act, color = "red")) + facet_grid(conc ~ strain) + labs(x = "Time (minutes)", y = "Normalized Activity") + ylim(0, NA) + presentation
+
+```
+
+## Strain Variation in Drug Concentration ##
+
+```{r Strain_Dose_Response, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste(processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
 
 if (length(strains) != length(unique(strains))) {
-  ggplot(strain.df) + geom_line(aes(x = time, y = mean.activity)) + 
-    geom_errorbar(aes(x = time, ymin = mean.activity - sd.activity, ymax = mean.activity + sd.activity)) + 
-    facet_wrap( ~ strain) + labs(x = "Time (minutes)", y = "Mean Activity") + presentation
+  ggplot(strain.df) + aes(x = time, y = mean.norm.act, color = strain) + geom_line() + facet_wrap( ~ conc) + 
+    labs(x = "Time (mins)", y = "Mean Activity") + ylim(0, NA) + presentation
 }
 
 ```
 
-## Strain Median Data ##
+```{r Strain_Variability, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste(processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
 
-```{r Strain_Median, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste(processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
+well_time.df <- well.df %>% filter(time == 44)
 
-if (length(strains) != length(unique(strains))) {
-  ggplot(strain.df) + aes(x = time, y = median.activity) + geom_line() + facet_wrap( ~ strain) +
-    labs(x = "Time (minutes)", y = "Median Activity") + presentation
-}
+ggplot(well_time.df) + aes(x = strain, y = norm.act) + geom_boxplot() + facet_wrap( ~ conc) + 
+    labs(x = "Strain", y = "Normalized Activity") + ylim(0, NA) + presentation
 
 ```
 
-## Strain Total Data ##
-
-```{r Strain_Total, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste(processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
-
-if (length(strains) != length(unique(strains))) {
-  ggplot(strain.df) + aes(x = time, y = total.activity) + geom_line() + facet_wrap( ~ strain) +
-    labs(x = "Time (minutes)", y = "Total Activity") + presentation
-}
-
-```
-
-## Strain Normalized Data ##
-
-```{r, warning = FALSE, message = FALSE, echo = FALSE}
-
-if (length(strains) != length(unique(strains))) {
-  strain.df <- strain.df %>%
-    #group_by(strain) %>%
-    mutate(norm.act = 100 * total.activity / max(total.activity, na.rm = TRUE))
-
-  strain.df <- ungroup(strain.df)
-}
-
-```
-
-```{r Strain_Normalized, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste(processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
-
-if (length(strains) != length(unique(strains))) {
-  ggplot(strain.df) + aes(x = time, y = norm.act) + ylim(0, 100) + geom_line() + facet_wrap( ~ strain) + 
-    labs(x = "Time (minutes)", y = "Normalized Activity") + presentation
-}
-
-```
