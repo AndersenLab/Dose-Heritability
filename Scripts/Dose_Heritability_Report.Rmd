@@ -15,6 +15,7 @@ options(stringsAsFactors = FALSE)
 source("./Scripts/wMT_fxns.R")
 source("./Scripts/survival_fxns.R")
 source(paste("./Scripts/", experimentName, ".R", sep = ""))
+source("./Scripts/Broad_Sense_Heritability_ECA.R")
 
 processedDataPath <- paste("./Data/Processed/", experimentName, sep = "")
 saveDataLocation <- paste(processedDataPath, "/", experimentName, sep = "")
@@ -55,7 +56,7 @@ save(raw.df, file = paste(processedDataPath, "/", experimentName, "_Raw.Rda", se
 ## experiment configuration file.                                           ##
 
 ordered.df <- raw.df[order(raw.df$col, raw.df$row, raw.df$time), ]
-ordered.df$strain <- rep(strains, each = numBins * length(conc))
+ordered.df$strain <- rep(strains, each = numBins * replicates)
 ordered.df$num <- rep(nums, each = numBins)
 
 save(ordered.df, file = paste(processedDataPath, "/", experimentName, "_Processed.Rda", sep = ""), ascii = TRUE)
@@ -144,16 +145,42 @@ ggplot(strain.df) + geom_line(aes(x = time, y = mean.act)) + geom_errorbar(aes(x
 
 ```{r Strain_Norm_Mean_Median, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste(processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
 
-ggplot(strain.df) + geom_line(aes(x = time, y = mean.norm.act)) + geom_errorbar(aes(x = time, ymin = mean.norm.act - sd.norm.act, ymax = mean.norm.act + sd.norm.act)) + geom_line(aes(x = time, y = median.norm.act, color = "red")) + facet_wrap( ~ strain) + labs(x = "Time (minutes)", y = "Normalized Activity") + ylim(0, NA) + presentation
+ggplot(strain.df) + geom_line(aes(x = time, y = mean.norm.act)) + geom_errorbar(aes(x = time, ymin = mean.norm.act - sd.norm.act, ymax = mean.norm.act + sd.norm.act)) + geom_line(aes(x = time, y = median.norm.act, color = "red")) + facet_wrap( ~ strain) + labs(x = "Time (minutes)", y = "Normalized Activity") + ylim(0, 12) + presentation
 
 ```
 
+## Difference in Phenotype at Time Point of Interest ##
+
 ```{r Strain_Variability, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste(processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
 
-well_time.df <- well.df %>% filter(time == 10)
+well_time.df <- well.df %>% filter(time == timePoint2)
 
 ggplot(well_time.df) + aes(x = strain, y = norm.act) + geom_boxplot() + geom_jitter() + 
     labs(x = "Strain", y = "Normalized Activity") + ylim(0, NA) + presentation
+
+```
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+
+heritabilities <- data.frame(time = seq(from = binSize, to = time, by = binSize), herit = rep(0, numBins))
+
+for (i in 1:numBins) {
+  x <- well.df %>% filter(time == binSize * i) %>% select(c(strain, norm.act))
+  x$pheno <- x$norm.act
+  x <- x %>% select(c(strain, pheno))
+  heritabilities$herit[i] <- H2.fun(x)
+}
+
+save(heritabilities, file = paste(processedDataPath, "/", experimentName, "_herit.Rda", sep = ""))
+
+```
+
+## Heritability of Response Over Time ##
+
+```{r Heritability, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste(processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
+
+ggplot(heritabilities) + aes(x = time, y = herit) + geom_line() + labs(x = "Time (mins)", y = "Heritability") + 
+  ylim(0, 1) + xlim(0, NA) + presentation
 
 ```
 

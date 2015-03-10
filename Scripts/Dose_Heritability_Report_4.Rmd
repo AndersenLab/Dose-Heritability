@@ -1,0 +1,197 @@
+---
+title: "Dose Heritability"
+author: "Ryan Abdella"
+date: "January 15, 2015"
+output:
+  html_document:
+    css: ~/Github/Food-Optimization/Scripts/foghorn_edited.css
+---
+
+
+```{r Setup, warning = FALSE, message = FALSE, echo = FALSE}
+
+options(stringsAsFactors = FALSE)
+
+source("./Scripts/wMT_fxns.R")
+source("./Scripts/survival_fxns.R")
+source(paste("./Scripts/", experimentName, ".R", sep = ""))
+source("./Scripts/Broad_Sense_Heritability_ECA.R")
+
+processedDataPath <- paste("./Data/Processed/", experimentName, sep = "")
+saveDataLocation <- paste(processedDataPath, "/", experimentName, sep = "")
+
+paste(experimentName)
+
+```
+
+```{r, warning = FALSE, echo = FALSE}
+
+## Pull in all the files associated with the current experiment  ##
+## and create a data frame containing all the raw data.          ##
+## Regroup data frame so that it's ordered by strain, replicate, ##
+## and day. Add in strain information.                           ##
+
+experimentFile <- dir(path = paste("./Data/Raw/", experimentName, sep = ""), 
+             pattern = ".txt", 
+             full.names = TRUE)
+
+## Stores the attributes for each experiment. ##
+
+report.df <- processMicrotrackerReport(experimentFile)
+binSize = report.df$binSize[1]
+numGroups = report.df$numGroups[1]
+numBins = report.df$numBins[1]
+time = report.df$time[1]
+
+## Now we need to generate a single data frame containing the data from all the ##
+## files for the experiment. We also filter the data so that each day has the   ##
+## same length of data collection.                                              ##
+
+raw.df <- generateDataFrameFromFile(report.df)
+
+save(raw.df, file = paste(processedDataPath, "/", experimentName, "_Raw.Rda", sep = ""), ascii = TRUE)
+
+## Let's reorganize the data frame so that all the data for a given well is ##
+## consecutive and add in strain information which is pulled from the       ##
+## experiment configuration file.                                           ##
+
+ordered.df <- raw.df[order(raw.df$col, raw.df$row, raw.df$time), ]
+ordered.df$strain <- rep(strains, each = numBins * replicates)
+ordered.df$num <- rep(nums, each = numBins)
+ordered.df$grouping <- rep(rep(1:15, each = 2), 96)
+
+ordered.df <- ordered.df %>%
+  group_by(row, col, strain, grouping) %>%
+  summarize(activity = sum(activity, na.rm = TRUE),
+            num = mean(num, na.rm = TRUE),
+            time = mean(grouping * 4))
+ordered.df <- ungroup(ordered.df)
+
+binSize = binSize * 2
+numBins = numBins / 2
+
+save(ordered.df, file = paste(processedDataPath, "/", experimentName, "_Processed.Rda", sep = ""), ascii = TRUE)
+
+```
+
+## Raw Activity ##
+
+```{r Raw, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste(processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
+
+ggplot(ordered.df) + aes(x = time, y = activity) + geom_point() + facet_grid(row ~ col) +
+  labs(x = "Time (minutes)", y = "Raw Activity") + ylim(0, NA) + presentation
+
+```
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+
+## Remove both columns and individual wells that were contaminated. ##
+## This information is specified in the experiment configuration    ##
+## file. Need to add the ability to remove only after a certain     ##
+## day.                                                             ##
+
+cleaned.df <- ordered.df
+cleaned.df$activity[(ordered.df$col %in% colRemove)] <- NA
+cleaned.df$activity[(ordered.df$row %in% rowRemove)] <- NA
+for(i in 1:nrow(wellRemove)) {
+  cleaned.df$activity[cleaned.df$row == wellRemove$row[i] & cleaned.df$col == wellRemove$col[i]] <- NA
+}
+
+save(cleaned.df, file = paste(processedDataPath, "/", experimentName, "_Cleaned.Rda", sep = ""), ascii = TRUE)
+
+```
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+
+## Normalize total activity data by the number of worms in each well. ##
+## This is also the same as normalizing the mean values.              ##
+
+well.df <- cleaned.df %>%
+  group_by(col, row) %>%
+  mutate(norm.act = activity / num)
+
+well.df <- ungroup(well.df)
+
+save(well.df, file = paste(processedDataPath, "/", experimentName, "_Well.Rda", sep = ""), ascii = TRUE)
+
+```
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+
+## Let's look at the mean and standard deviation of the ##
+## data per strain.                                     ##
+
+if (length(strains) != length(unique(strains))) {
+  strain.df <- well.df %>%
+    group_by(strain, time) %>%
+    summarise(mean.norm.act = mean(norm.act, na.rm = TRUE), 
+              sd.norm.act = sd(norm.act, na.rm = TRUE), 
+              median.norm.act = median(norm.act, na.rm = TRUE), 
+              total.norm.act = sum(norm.act, na.rm = TRUE),
+              mean.act = mean(activity, na.rm = TRUE),
+              sd.act = sd(activity, na.rm = TRUE),
+              median.act = median(activity, na.rm = TRUE),
+              total.act = sum(activity, na.rm = TRUE))
+
+  strain.df <- ungroup(strain.df)
+
+  for (i in 1:nrow(strain.df)) {
+    if (strain.df$total.norm.act[i] == 0) strain.df$total.norm.act[i] <- NA
+    if (!is.finite(strain.df$mean.norm.act[i])) strain.df$mean.norm.act[i] <- NA
+    if (!is.finite(strain.df$sd.norm.act[i])) strain.df$sd.norm.act[i] <- NA
+  }
+} else print("No strain replicates to display.")
+
+```
+
+## Strain Mean and Median Data ##
+
+```{r, Strain_Mean_Median, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste(processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
+
+ggplot(strain.df) + geom_line(aes(x = time, y = mean.act)) + geom_errorbar(aes(x = time, ymin = mean.act - sd.act, ymax = mean.act + sd.act)) + geom_line(aes(x = time, y = median.act, color = "red")) + facet_wrap( ~ strain) + labs(x = "Time (minutes)", y = "Activity") + ylim(0, NA) + presentation
+
+```
+
+## Strain Normalized Mean and Median Data ##
+
+```{r Strain_Norm_Mean_Median, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste(processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
+
+ggplot(strain.df) + geom_line(aes(x = time, y = mean.norm.act)) + geom_errorbar(aes(x = time, ymin = mean.norm.act - sd.norm.act, ymax = mean.norm.act + sd.norm.act)) + geom_line(aes(x = time, y = median.norm.act, color = "red")) + facet_wrap( ~ strain) + labs(x = "Time (minutes)", y = "Normalized Activity") + ylim(0, NA) + presentation
+
+```
+
+## Difference in Phenotype at Time Point of Interest ##
+
+```{r Strain_Variability, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste(processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
+
+well_time.df <- well.df %>% filter(time == timePoint4)
+
+ggplot(well_time.df) + aes(x = strain, y = norm.act) + geom_boxplot() + geom_jitter() + 
+    labs(x = "Strain", y = "Normalized Activity") + ylim(0, NA) + presentation
+
+```
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+
+heritabilities <- data.frame(time = seq(from = binSize, to = time, by = binSize), herit = rep(0, numBins))
+
+for (i in 1:numBins) {
+  x <- well.df %>% filter(time == binSize * i) %>% select(c(strain, norm.act))
+  x$pheno <- x$norm.act
+  x <- x %>% select(c(strain, pheno))
+  heritabilities$herit[i] <- H2.fun(x)
+}
+
+save(heritabilities, file = paste(processedDataPath, "/", experimentName, "_herit.Rda", sep = ""))
+
+```
+
+## Heritability of Response Over Time ##
+
+```{r Heritability, warning = FALSE, message = FALSE, echo = FALSE, fig.path = paste(processedDataPath, "/", experimentName, "_", sep = ""), fig.width = 15, fig.height = 12}
+
+ggplot(heritabilities) + aes(x = time, y = herit) + geom_line() + labs(x = "Time (mins)", y = "Heritability") + 
+  ylim(0, 1) + xlim(0, NA) + presentation
+
+```
+
